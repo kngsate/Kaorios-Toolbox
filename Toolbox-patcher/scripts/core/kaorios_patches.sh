@@ -1,6 +1,51 @@
 #!/usr/bin/env bash
 # kaorios_patches.sh - Kaorios Toolbox framework patching functions
 # Inject Kaorios utility classes into decompiled framework
+# inject_kaorios_utility_classes() {
+#     local decompile_dir="$1"
+#     local kaorios_source="${SCRIPT_DIR}/../kaorios_toolbox/utils/kaorios"
+
+#     if [ ! -d "$kaorios_source" ]; then
+#         err "Kaorios utility classes not found at $kaorios_source"
+#         return 1
+#     fi
+
+#     log "Injecting Kaorios utility classes into framework..."
+
+#     # Find the highest numbered smali_classes directory (the LAST one)
+#     local target_smali_dir="smali"
+#     local max_num=0
+
+#     # Check for smali_classes2, smali_classes3, etc.
+#     for dir in "$decompile_dir"/smali_classes*; do
+#         if [ -d "$dir" ]; then
+#             # Extract the number from smali_classesN
+#             local num=$(basename "$dir" | sed 's/smali_classes//')
+#             if [[ "$num" =~ ^[0-9]+$ ]] && [ "$num" -gt "$max_num" ]; then
+#                 max_num=$num
+#                 target_smali_dir="smali_classes${num}"
+#             fi
+#         fi
+#     done
+
+#     log "Injecting into last existing directory: $target_smali_dir"
+
+#     # Create the package directory structure in com/android/internal/util/kaorios/
+#     local target_dir="$decompile_dir/$target_smali_dir/com/android/internal/util/kaorios"
+#     mkdir -p "$target_dir"
+
+#     # Copy all utility classes
+#     if ! cp -r "$kaorios_source"/* "$target_dir/"; then
+#         err "Failed to copy Kaorios utility classes"
+#         return 1
+#     fi
+
+#     local copied_count=$(find "$target_dir" -name "*.smali" | wc -l)
+#     log "✓ Injected $copied_count Kaorios utility classes into $target_smali_dir/com/android/internal/util/kaorios/"
+
+#     return 0
+# }
+
 inject_kaorios_utility_classes() {
     local decompile_dir="$1"
     local kaorios_source="${SCRIPT_DIR}/../kaorios_toolbox/utils/kaorios"
@@ -12,25 +57,25 @@ inject_kaorios_utility_classes() {
 
     log "Injecting Kaorios utility classes into framework..."
 
-    # Find the highest numbered smali_classes directory (the LAST one)
-    local target_smali_dir="smali"
+    # 1. Cari folder smali terakhir
     local max_num=0
-
-    # Check for smali_classes2, smali_classes3, etc.
     for dir in "$decompile_dir"/smali_classes*; do
         if [ -d "$dir" ]; then
-            # Extract the number from smali_classesN
             local num=$(basename "$dir" | sed 's/smali_classes//')
             if [[ "$num" =~ ^[0-9]+$ ]] && [ "$num" -gt "$max_num" ]; then
                 max_num=$num
-                target_smali_dir="smali_classes${num}"
             fi
         fi
     done
+    
+    # FIX: Tambahkan +1 untuk membuat folder BARU
+    # Jika max_num=4 (smali_classes4), kita buat smali_classes5
+    local next_num=$((max_num + 1))
+    local target_smali_dir="smali_classes${next_num}"
 
-    log "Injecting into last existing directory: $target_smali_dir"
+    log "Creating NEW dex container: $target_smali_dir to avoid 65k limit"
 
-    # Create the package directory structure in com/android/internal/util/kaorios/
+    # Create the package directory structure in the NEW smali folder
     local target_dir="$decompile_dir/$target_smali_dir/com/android/internal/util/kaorios"
     mkdir -p "$target_dir"
 
@@ -41,7 +86,7 @@ inject_kaorios_utility_classes() {
     fi
 
     local copied_count=$(find "$target_dir" -name "*.smali" | wc -l)
-    log "✓ Injected $copied_count Kaorios utility classes into $target_smali_dir/com/android/internal/util/kaorios/"
+    log "✓ Injected $copied_count Kaorios utility classes into NEW $target_smali_dir"
 
     return 0
 }
